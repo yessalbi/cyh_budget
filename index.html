@@ -229,7 +229,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="balance-num" id="balanceNum">+0원</div>
     <div class="balance-sub" id="balanceSub">전체 순잔액</div>
     <div class="ratio-wrap">
-      <div class="ratio-labels"><span class="ratio-lbl" style="color:var(--green)">수입</span><span class="ratio-lbl" style="color:var(--red)">지출</span></div>
+      <div class="ratio-labels"><span class="ratio-lbl" style="color:var(--green)" id="ratioLblInc">수입</span><span class="ratio-lbl" style="color:var(--red)">지출+이체</span></div>
       <div class="ratio-track"><div class="ratio-inc" id="ratioInc" style="width:50%"></div><div class="ratio-exp" id="ratioExp" style="width:50%"></div></div>
       <div class="ratio-vals"><span class="ratio-val inc" id="ratioIncVal">0원</span><span class="ratio-val exp" id="ratioExpVal">0원</span></div>
     </div>
@@ -468,11 +468,24 @@ function render(){
   document.getElementById('balanceNum').style.color=bal<0?'var(--red)':'var(--text)';
   const sa=state.accounts.find(a=>a.id===state.selectedAcct);
   document.getElementById('balanceSub').textContent=sa?`${sa.name} 순잔액`:'전체 순잔액';
-  const tot=inc+exp;
-  document.getElementById('ratioInc').style.width=(tot>0?inc/tot*100:50)+'%';
-  document.getElementById('ratioExp').style.width=(tot>0?exp/tot*100:50)+'%';
-  document.getElementById('ratioIncVal').textContent=won(inc);
-  document.getElementById('ratioExpVal').textContent=won(exp);
+
+  // 비율 바: 개별 통장 보기일 때 이체받은 금액도 수입 쪽에 포함
+  let ratioInc=inc, ratioExp=exp;
+  if(state.selectedAcct!=='all'){
+    const monthTxns=state.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===state.month&&d.getFullYear()===state.year;});
+    const tfrIn=monthTxns.filter(t=>t.type==='transfer'&&t.toAcctId===state.selectedAcct).reduce((s,t)=>s+t.amount,0);
+    const tfrOut=monthTxns.filter(t=>t.type==='transfer'&&t.fromAcctId===state.selectedAcct).reduce((s,t)=>s+t.amount,0);
+    ratioInc=inc+tfrIn;
+    ratioExp=exp+tfrOut;
+    document.getElementById('ratioLblInc').textContent=tfrIn>0?'수입+이체':'수입';
+  } else {
+    document.getElementById('ratioLblInc').textContent='수입';
+  }
+  const tot=ratioInc+ratioExp;
+  document.getElementById('ratioInc').style.width=(tot>0?ratioInc/tot*100:50)+'%';
+  document.getElementById('ratioExp').style.width=(tot>0?ratioExp/tot*100:50)+'%';
+  document.getElementById('ratioIncVal').textContent=won(ratioInc);
+  document.getElementById('ratioExpVal').textContent=won(ratioExp);
   renderAcctTabs();renderHomeGoals();renderAcctOverview();renderWeekBars(txns);renderDonut(txns);renderRecentTxns(txns);renderListTxns();renderBudget(txns);renderGoals();renderEntryRecent(txns);renderAcctManage();buildEntryAcctSelect();
 }
 
