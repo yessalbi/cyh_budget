@@ -198,6 +198,55 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 </head>
 <body>
 
+<!-- ═══════ AUTH GATE ═══════ -->
+<div id="auth-gate" style="position:fixed;inset:0;z-index:99999;
+  background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+  <div style="font-size:28px;">💰</div>
+  <div style="font-family:inherit;font-size:20px;font-weight:700;color:#1e293b;">돈관리</div>
+  <div style="font-size:13px;color:#94a3b8;">비밀번호를 입력해주세요</div>
+  <input id="auth-pw" type="password" placeholder="비밀번호 4자리" maxlength="4"
+    style="width:180px;border:2px solid #e2e8f0;border-radius:12px;padding:12px 18px;
+           font-family:inherit;font-size:20px;text-align:center;outline:none;
+           letter-spacing:8px;background:#fff;color:#1e293b;transition:border-color .2s;"
+    onfocus="this.style.borderColor='#3b82f6'"
+    onblur="this.style.borderColor='#e2e8f0'"
+    oninput="if(this.value.length===4)tryBudgetAuth()"
+    onkeydown="if(event.key==='Enter')tryBudgetAuth()" />
+  <div id="auth-error" style="font-size:12px;color:#dc2626;min-height:18px;"></div>
+  <button onclick="tryBudgetAuth()"
+    style="padding:10px 36px;border-radius:10px;border:none;
+           background:#3b82f6;color:#fff;font-family:inherit;
+           font-size:14px;font-weight:600;cursor:pointer;">
+    입장하기
+  </button>
+  <div style="font-size:11px;color:#94a3b8;margin-top:8px;">🔑 친구에게 비밀번호를 물어보세요</div>
+</div>
+<script>
+(function(){
+  const _AUTH_PW = '0009';
+  window.tryBudgetAuth = function() {
+    const input = document.getElementById('auth-pw');
+    const error = document.getElementById('auth-error');
+    if (input.value !== _AUTH_PW) {
+      error.textContent = '비밀번호가 맞지 않아요';
+      input.value = '';
+      input.focus();
+      input.style.borderColor = '#dc2626';
+      setTimeout(() => input.style.borderColor = '#e2e8f0', 1500);
+      return;
+    }
+    sessionStorage.setItem('budgetAuthOk', '1');
+    document.getElementById('auth-gate').style.display = 'none';
+  };
+  if (sessionStorage.getItem('budgetAuthOk') === '1') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const gate = document.getElementById('auth-gate');
+      if (gate) gate.style.display = 'none';
+    });
+  }
+})();
+</script>
+
 <!-- SETUP -->
 <div id="setupScreen">
   <div class="setup-logo">💸</div>
@@ -800,6 +849,20 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 (function init(){
+  // 인증 안 됐으면 auth gate 대기
+  if (sessionStorage.getItem('budgetAuthOk') !== '1') {
+    const waitAuth = setInterval(() => {
+      if (sessionStorage.getItem('budgetAuthOk') === '1') {
+        clearInterval(waitAuth);
+        runBudgetInit();
+      }
+    }, 200);
+    return;
+  }
+  runBudgetInit();
+})();
+
+function runBudgetInit(){
   const today=new Date().toISOString().slice(0,10);
   document.getElementById('entryDate').value=today;
   document.getElementById('tfrDate').value=today;
@@ -807,7 +870,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const cfg=JSON.parse(localStorage.getItem('fb_config')||'null');
   if(!cfg)return;
   if(cfg.skip)startLocal();else initFirebase(cfg.apiKey,cfg.dbUrl,cfg.uid);
-})();
+}
 </script>
 </body>
 </html>
